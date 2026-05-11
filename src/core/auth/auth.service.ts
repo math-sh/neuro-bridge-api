@@ -4,19 +4,15 @@ import {
   InternalServerErrorException,
   UnauthorizedException,
 } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
-import { UsersService } from '../../domain/users/users.service';
-import { compare } from 'bcrypt';
-import { WrongCredentialsExceptionFilter } from '@core/filters/wrong-credentials-exception.filter';
-import { AuthUser } from '@core/common/interfaces/auth-user';
-import { UpdateResult } from 'typeorm';
+import { UsersService } from '../../modules/users/domain/users.service';
+import { AuthUser } from '../common/interfaces/auth-user';
+import { verifyPassword } from '../common/utils/hash';
+import { WrongCredentialsException } from '../filters/wrong-credentials-exception.filter';
 
 @Injectable()
 export class AuthService {
   constructor(
-    @Inject(ConfigService)
-    private readonly config: ConfigService,
     @Inject('JwtRefreshService')
     private readonly jwtRefresh: JwtService,
     private readonly jwtService: JwtService,
@@ -26,11 +22,14 @@ export class AuthService {
   // Called by Local Guard
   async validateUser(email: string, pass: string): Promise<AuthUser> {
     const user = await this.getUserCredentials(email);
-    const doesMatch = await compare(pass, user.password);
-    if (!doesMatch) throw new WrongCredentialsExceptionFilter();
-    delete user.password;
+    const doesMatch = await verifyPassword(pass, user.password);
+    if (!doesMatch) throw new WrongCredentialsException();
     return {
-      user,
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      profile: user.profile,
+      mustChangePassword: user.mustChangePassword || false,
     };
   }
 
@@ -54,32 +53,9 @@ export class AuthService {
     }
   }
 
-  async changePassword(id: string, newPassword: string): Promise<any> {
-    const hashed = await import('bcrypt').then((b) => b.hash(newPassword, 10));
-    return this.userService.findOne({ where: { id } }).then(async (user) => {
-      if (!user) throw new UnauthorizedException('Usuário não encontrado');
-      await this.userService.updatePassword(id, hashed);
-      return { success: true, message: 'Senha alterada com sucesso' };
-    });
-  }
-
-  async createPassword(
-    id: string,
-    createPasswordDto: CreatePasswordDto,
-  ): Promise<UpdateResult> {
-    try {
-      const password = createPasswordDto.password;
-      const hashed = await import('bcrypt').then((b) => b.hash(password, 10));
-      createPasswordDto.password = hashed;
-      return await this.userService.createPassword(id, createPasswordDto);
-    } catch (error) {
-      console.error(error);
-    }
-  }
-
   async refreshToken(id: string) {
     try {
-      const user = await this.userService.findOne({
+      const user = await this.userService.findOneOptions({
         where: { id },
         select: {
           id: true,
@@ -87,13 +63,23 @@ export class AuthService {
           email: true,
           password: true,
           profile: true,
+          mustChangePassword: true,
         },
       });
+      if (!user) throw new UnauthorizedException('User not found');
       const accessToken = await this.signAccessToken({
-        user,
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        profile: user.profile,
+        mustChangePassword: user.mustChangePassword || false,
       });
       const refreshToken = await this.signRefreshToken({
-        user,
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        profile: user.profile,
+        mustChangePassword: user.mustChangePassword || false,
       });
       return {
         accessToken,
@@ -112,7 +98,7 @@ export class AuthService {
   }
 
   async getUserCredentials(email: string) {
-    const user = await this.userService.findOne({
+    const user = await this.userService.findOneOptions({
       where: { email },
       select: {
         id: true,
@@ -134,6 +120,7 @@ export class AuthService {
         email: user.email,
         name: user.name,
         profile: user.profile,
+        mustChangePassword: user.mustChangePassword || false,
       },
       {
         subject: user.id.toString(),
@@ -148,6 +135,7 @@ export class AuthService {
         name: user.name,
         email: user.email,
         profile: user.profile,
+        mustChangePassword: user.mustChangePassword || false,
       },
       {
         subject: user.id.toString(),

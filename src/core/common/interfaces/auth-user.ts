@@ -5,4 +5,5 @@ export interface AuthUser {
   profile: string;
   parentsId?: string;
   childrenId?: string;
+  mustChangePassword?: boolean;
 }
