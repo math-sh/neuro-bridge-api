@@ -1,8 +1,8 @@
+import { Logger } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
-import { AppModule } from './app.module';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { SwaggerModule } from '@nestjs/swagger';
-import { Logger } from '@nestjs/common';
+import { AppModule } from './app.module';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule, {
@@ -47,7 +47,7 @@ async function bootstrap() {
     },
   });
 
-  const api = await app.listen(process.env.APP_PORT ?? 3000);
+  const api = await app.listen(process.env.APP_PORT);
   Logger.debug(`API is running on port ${api.address().port}`, 'Bootstrap');
 }
 bootstrap();

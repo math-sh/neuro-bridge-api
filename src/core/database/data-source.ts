@@ -1,6 +1,5 @@
 import { DataSource, DataSourceOptions } from 'typeorm';
 import { SeederOptions } from 'typeorm-extension';
-import { MainSeeder } from './seeds/main-seeder';
 
 export const options: DataSourceOptions & SeederOptions = {
   type: 'mysql',
@@ -11,7 +10,7 @@ export const options: DataSourceOptions & SeederOptions = {
   password: process.env.DB_PASSWORD,
   entities: ['dist/**/*.entity.js'],
   migrations: ['dist/database/migrations/*.js'],
-  seeds: [MainSeeder],
+
   factories: ['dist/database/factories/**/*.js'],
   logger: 'simple-console',
 };
