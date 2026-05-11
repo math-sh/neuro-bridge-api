@@ -1,15 +1,17 @@
-import { Logger } from '@nestjs/common';
+import { Logger, ValidationPipe } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
 import { NestExpressApplication } from '@nestjs/platform-express';
-import { SwaggerModule } from '@nestjs/swagger';
-import { AppModule } from './app.module';
+import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import { AppModule } from './ioC/app.module';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule, {
     snapshot: true,
   });
+  const config = app.get(ConfigService);
   app.enableCors({
-    origin: process.env.FRONTEND_URL,
+    origin: config.get<string>('FRONTEND_URL'),
     credentials: true,
   });
 
@@ -47,7 +49,10 @@ async function bootstrap() {
     },
   });
 
-  const api = await app.listen(process.env.APP_PORT);
-  Logger.debug(`API is running on port ${api.address().port}`, 'Bootstrap');
+  const api = await app.listen(config.get<string>('APP_PORT') ?? 8080);
+  Logger.debug(
+    `API is running on port ${config.get<string>('APP_PORT') ?? 8080}.`,
+    'Bootstrap',
+  );
 }
 bootstrap();

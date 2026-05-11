@@ -6,10 +6,9 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { ApiBody, ApiTags } from '@nestjs/swagger';
-import { AuthUser } from '../common/interfaces/auth-user';
+import type { AuthUser } from '../common/interfaces/auth-user';
 import { Me } from '../decorators/user.decorator';
 import { AuthService } from './auth.service';
-import { JwtRefreshAuthGuard } from './guards/jwt-refresh-auth.guard';
 import { LocalAuthGuard } from './guards/local-auth.guard';
 
 @ApiTags('Authentication')
@@ -30,11 +29,5 @@ export class AuthController {
   @UseGuards(LocalAuthGuard)
   async login(@Me() user: AuthUser) {
     return this.authService.login(user);
-  }
-
-  @Post('refresh')
-  @UseGuards(JwtRefreshAuthGuard)
-  async refresh(@Me() user: AuthUser) {
-    return this.authService.refreshToken(user.id);
   }
 }

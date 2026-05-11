@@ -1,13 +1,23 @@
-import loadArgon2idWasm from 'argon2id';
-export async function hashPassword(password: string): Promise<string> {
-  const argon2id = await loadArgon2idWasm();
-  const hash = argon2id({
-    password: new TextEncoder().encode(password),
-    salt: crypto.getRandomValues(new Uint8Array(32)),
-    parallelism: 4,
-    passes: 3,
-    memorySize: 2 ** 16,
-  });
+import * as argon2 from 'argon2';
 
-  return Buffer.from(hash).toString('hex');
+const ARGON2_OPTIONS: argon2.Options = {
+  type: argon2.argon2id,
+  parallelism: 4,
+  timeCost: 3,
+  memoryCost: 2 ** 16,
+};
+
+export async function hashPassword(password: string): Promise<string> {
+  return argon2.hash(password, ARGON2_OPTIONS);
+}
+
+export async function verifyPassword(
+  password: string,
+  storedHash: string,
+): Promise<boolean> {
+  try {
+    return await argon2.verify(storedHash, password);
+  } catch {
+    return false;
+  }
 }
